@@ -13,6 +13,7 @@ import { getGitNotesNamespace, saveToGitNotes, loadFromGitNotes, getCurrentGitUs
 import { enableClipboardTracking, disableClipboardTracking } from './clipboard';
 import { patchExtensions } from './patch';
 import { installNativeHost } from './nativeHost';
+import { constants } from './constants';
 
 let currentUser: string = "";
 var editLock = new Mutex();
@@ -25,9 +26,18 @@ const [vscodeMajor, vscodeMinor] = vscodeMajorMinor;
 export function activate(context: vscode.ExtensionContext) {
 	// Only exclude the .tabd directory from the file explorer when using repository storage
 	const config = vscode.workspace.getConfiguration('tabd');
-	const storageType = config.get<string>('storage', 'repository');
+	const storageType = config.get<string>('storage', constants.storageTypes.default.name);
 
-	if (storageType === 'repository') {
+	if (storageType === 'api') {
+		// 'TODO' if required
+		// const files = vscode.workspace.getConfiguration('files');
+		// const exclude = files.get('exclude') as Record<string, boolean>;
+		// exclude['**/.tabd'] = true;
+		// files.update('exclude', exclude, vscode.ConfigurationTarget.Global);
+
+	}
+
+	if (storageType === constants.storageTypes.repository.name) {
 		const files = vscode.workspace.getConfiguration('files');
 		const exclude = files.get('exclude') as Record<string, boolean>;
 		exclude['**/.tabd'] = true;
@@ -134,9 +144,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 				// Update files.exclude based on storage type
 				const config = vscode.workspace.getConfiguration('tabd');
-				const storageType = config.get<string>('storage', 'repository');
+				const storageType = config.get<string>('storage', constants.storageTypes.default.name);
 
-				if (storageType === 'repository') {
+				if (storageType === constants.storageTypes.repository.name) {
 					const files = vscode.workspace.getConfiguration('files');
 					const exclude = files.get('exclude') as Record<string, boolean>;
 					exclude['**/.tabd'] = true;
@@ -519,7 +529,7 @@ async function notifyPaste(d: vscode.TextDocument, ranges: readonly vscode.Range
 
 async function clearFileData(workspaceFolder: vscode.WorkspaceFolder, document: vscode.TextDocument): Promise<void> {
 	const config = vscode.workspace.getConfiguration('tabd');
-	const storageType = config.get<string>('storage', 'repository');
+	const storageType = config.get<string>('storage', constants.storageTypes.default.name);
 
 	if (storageType === 'gitNotes') {
 		// Clear Git notes for this file
@@ -618,7 +628,7 @@ async function clearFileData(workspaceFolder: vscode.WorkspaceFolder, document: 
 
 async function clearWorkspaceData(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
 	const config = vscode.workspace.getConfiguration('tabd');
-	const storageType = config.get<string>('storage', 'repository');
+	const storageType = config.get<string>('storage', constants.storageTypes.default.name);
 
 	if (storageType === 'gitNotes') {
 		// Clear all Git notes with tabd prefix
@@ -736,9 +746,9 @@ async function saveFileState(document: vscode.TextDocument): Promise<void> {
 	}
 
 	const config = vscode.workspace.getConfiguration('tabd');
-	const storageType = config.get<string>('storage', 'repository');
+	const storageType = config.get<string>('storage', constants.storageTypes.default.name);
 
-	if (currentUser === "" && (storageType === 'repository' || storageType === 'gitNotes')) {
+	if (currentUser === "" && (storageType === constants.storageTypes.repository.name || storageType === constants.storageTypes.gitNotes.name)) {
 		currentUser = getCurrentGitUser(workspaceFolder);
 	}
 
@@ -752,7 +762,7 @@ async function saveFileState(document: vscode.TextDocument): Promise<void> {
 				end: change.end,
 				type: change.getType(),
 				creationTimestamp: change.getCreationTimestamp(),
-				author: change.getAuthor() || currentUser || ((storageType === 'repository' || storageType === 'gitNotes') ? 'an unknown user' : ''),
+				author: change.getAuthor() || currentUser || ((storageType ===constants.storageTypes.repository.name  || storageType === constants.storageTypes.gitNotes.name) ? 'an unknown user' : ''),
 				pasteUrl: change.getPasteUrl() || '',
 				pasteTitle: change.getPasteTitle() || '',
 				aiName: change.getAiName() || '',
@@ -800,7 +810,7 @@ async function saveFileState(document: vscode.TextDocument): Promise<void> {
 	}
 
 	// Check is Git is initialized at the workspace root (only required for repository storage)					
-	if (storageType === 'repository') {
+	if (storageType ===constants.storageTypes.repository.name) {
 		const gitPath = path.join(workspaceFolder.uri.fsPath, '.git');
 		const isGitRepo = fs.existsSync(gitPath);
 
@@ -865,9 +875,9 @@ function loadGlobalFileStateForDocumentFromDisk(document: vscode.TextDocument | 
 
 	// Check is Git is initialized at the workspace root (required for repository and gitnotes storage)
 	const config = vscode.workspace.getConfiguration('tabd');
-	const storageType = config.get<string>('storage', 'repository');
+	const storageType = config.get<string>('storage', constants.storageTypes.default.name);
 
-	if (storageType === 'repository' || storageType === 'gitNotes') {
+	if (storageType === constants.storageTypes.repository.name || storageType === constants.storageTypes.gitNotes.name) {
 		// Set the current user if not already set
 		if (currentUser === "") {
 			currentUser = getCurrentGitUser(workspaceFolder) || "";

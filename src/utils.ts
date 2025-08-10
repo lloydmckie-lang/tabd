@@ -4,6 +4,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import * as os from "os";
 import { createHash } from 'crypto';
+import { constants } from "./constants";
 
 export const isWin = process.platform.startsWith("win");
 
@@ -40,13 +41,13 @@ function forceWindowsDriveLetterToUppercase<T extends string | undefined>(p: T):
 }
 
 function makeid(length: number): string {
-    var result           = '';
-    var characters       = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    var charactersLength = characters.length;
-    for ( var i = 0; i < length; i++ ) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-    return result;
+	var result = '';
+	var characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+	var charactersLength = characters.length;
+	for (var i = 0; i < length; i++) {
+		result += characters.charAt(Math.floor(Math.random() * charactersLength));
+	}
+	return result;
 }
 
 function getCurrentDateTimeReverse() {
@@ -70,19 +71,19 @@ export function uniqueFileName(): string {
 	const dateTime = getCurrentDateTimeReverse();
 	const randomId = makeid(6);
 	const fileName = `tabd-${dateTime}-${randomId}.json`;
-	
+
 	return fileName;
 }
 
 export function shouldProcessFile(uri: URI): boolean {
 	const relativePath = vscode.workspace.asRelativePath(uri, false);
 	const parsedPath = path.parse(relativePath);
-	
+
 	// Check if the file itself starts with a dot
 	if (parsedPath.name.startsWith('.')) {
 		return false;
 	}
-	
+
 	// Check if any directory in the path starts with a dot
 	const pathParts = parsedPath.dir.split(path.sep);
 	for (const part of pathParts) {
@@ -90,34 +91,34 @@ export function shouldProcessFile(uri: URI): boolean {
 			return false;
 		}
 	}
-	
+
 	return true;
 }
 
 export function getStorageDirectory(workspaceFolder: vscode.WorkspaceFolder, document: vscode.TextDocument): string {
 	const config = vscode.workspace.getConfiguration('tabd');
-	const storageType = config.get<string>('storage', 'repository');
-	
-	if (storageType === 'homeDirectory') {
+	const storageType = config.get<string>('storage', constants.storageTypes.default.name);
+
+	if (storageType === constants.storageTypes.homeDirectory.name) {
 		// Create sanitized workspace path for home directory storage
 		const workspacePath = workspaceFolder.uri.fsPath;
 		const sanitizedPath = workspacePath
 			.replace(/[^a-zA-Z0-9]/g, '_')
 			.replace(/_+/g, '_')
 			.replace(/^_|_$/g, '');
-		
-		return path.join(os.homedir(), '.tabd', 'workspaces', sanitizedPath);
-	} else if (storageType === 'repository') {
-		return path.join(workspaceFolder.uri.fsPath, '.tabd');
-	} else if (storageType === 'gitNotes') {
+
+		return path.join(os.homedir(), constants.fileExtension, 'workspaces', sanitizedPath);
+	} else if (storageType === constants.storageTypes.repository.name) {
+		return path.join(workspaceFolder.uri.fsPath, constants.fileExtension);
+	} else if (storageType === constants.storageTypes.gitNotes.name) {
 		// For gitnotes, use home directory to store temporary files before applying to git notes
 		const workspacePath = workspaceFolder.uri.fsPath;
 		const sanitizedPath = workspacePath
 			.replace(/[^a-zA-Z0-9]/g, '_')
 			.replace(/_+/g, '_')
 			.replace(/^_|_$/g, '');
-		
-		return path.join(os.homedir(), '.tabd', 'gitnotes', sanitizedPath);
+
+		return path.join(os.homedir(), constants.fileExtension, 'gitnotes', sanitizedPath);
 	} else {
 		throw new Error(`Unsupported storage type: ${storageType}`);
 	}
@@ -125,13 +126,13 @@ export function getStorageDirectory(workspaceFolder: vscode.WorkspaceFolder, doc
 
 export function getLogDirectory(workspaceFolder: vscode.WorkspaceFolder, document: vscode.TextDocument): string {
 	const config = vscode.workspace.getConfiguration('tabd');
-	const storageType = config.get<string>('storage', 'repository');
-	
-	if (storageType === 'gitNotes') {
+	const storageType = config.get<string>('storage', constants.storageTypes.default.name);
+
+	if (storageType === constants.storageTypes.gitNotes.name) {
 		// For gitnotes, we don't use a traditional log directory structure
 		// Instead, we create a temp directory for note content files
 		const baseStorageDir = getStorageDirectory(workspaceFolder, document);
-		return path.join(baseStorageDir, 'temp');
+		return path.join(baseStorageDir, constants.storageTypes.gitNotes.logDirectory);
 	} else {
 		const baseStorageDir = getStorageDirectory(workspaceFolder, document);
 		const relativePath = vscode.workspace.asRelativePath(document.uri, false);
@@ -140,7 +141,7 @@ export function getLogDirectory(workspaceFolder: vscode.WorkspaceFolder, documen
 }
 
 export function generateDataChecksum(data: string): string {
-	return createHash('sha256').update(data).digest('hex');
+	return createHash(constants.hashAlgorithm).update(data).digest(constants.hashEncoding);
 }
 
 export function verifyDataChecksum(data: string, expectedChecksum: string): boolean {

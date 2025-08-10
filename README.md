@@ -119,3 +119,12 @@ If you find Tab'd useful, consider:
 - ⭐ Starring the [GitHub repository](https://github.com/iann0036/tabd)
 - 💝 [Sponsoring the project](https://github.com/sponsors/iann0036)
 - 📝 Leaving a review on the VS Code Marketplace / Open VSX Registry
+
+
+## Compile
+
+```sh
+npm run clean
+npm run compile
+
+```
